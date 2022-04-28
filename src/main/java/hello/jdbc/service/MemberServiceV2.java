@@ -4,6 +4,7 @@ import hello.jdbc.domain.Member;
 import hello.jdbc.repository.MemberRepositoryV2;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.support.JdbcUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -16,7 +17,6 @@ import java.sql.SQLException;
 public class MemberServiceV2 {
     private final MemberRepositoryV2 memberRepositoryV2;
     private final DataSource dataSource;
-
     public void accountTransfer(String fromId, String toId, int money) throws SQLException {
         Connection con = dataSource.getConnection();
         try {
