@@ -1,10 +1,12 @@
 package hello.jdbc.repository;
 
 import hello.jdbc.domain.Member;
+import hello.jdbc.repository.ex.MyDbException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
-import org.springframework.stereotype.Repository;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -14,19 +16,20 @@ import java.sql.SQLException;
 import java.util.NoSuchElementException;
 
 /**
- * 트랜잭션 매니저를 이용한
- * 트랜잭션 관리
+ * 스프링에서 제공하는 ExceptionTranslator을 이용한 예외 추상화
  */
 
 @Slf4j
-public class MemberRepositoryV3 implements MemberRepositoryEx{
+public class MemberRepositoryV4_2 implements MemberRepository{
     private DataSource dataSource;
+    private final SQLErrorCodeSQLExceptionTranslator exTranslator;
 
-    public MemberRepositoryV3(DataSource dataSource) {
+    public MemberRepositoryV4_2(DataSource dataSource) {
         this.dataSource = dataSource;
+        this.exTranslator = new SQLErrorCodeSQLExceptionTranslator(dataSource);
     }
 
-    public int save(Member member) throws SQLException {
+    public int save(Member member) {
         String sql = "insert into member(member_id, money) values(?, ?)";
 
         Connection con = null;
@@ -39,14 +42,13 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             pstmt.setInt(2, member.getMoney());
             return pstmt.executeUpdate();
         } catch (SQLException e) {
-            log.info("db error", e);
-            throw e;
+            throw exTranslator.translate("save", sql, e);
         } finally {
             close(con, pstmt, null);
         }
     }
 
-    public Member findById(String id) throws SQLException {
+    public Member findById(String id) {
         String sql = "select * from member where member_id = ?";
 
         Connection con = null;
@@ -70,14 +72,13 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             throw new NoSuchElementException(id + "인 member는 존재하지 않습니다.");
 
         } catch (SQLException e) {
-            log.info("db error", e);
-            throw e;
+            throw exTranslator.translate("select", sql, e);
         } finally {
             close(con, pstmt, rs);
         }
     }
 
-    public void update(String memberId, int money) throws SQLException {
+    public void update(String memberId, int money) {
         String sql = "update member set money = ? where member_id = ?";
 
         Connection con = null;
@@ -92,14 +93,13 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             int count = pstmt.executeUpdate();
             log.info("update count = {}", count);
         } catch (SQLException e) {
-            log.info("db error", e);
-            throw e;
+            throw exTranslator.translate("update", sql, e);
         } finally {
             close(con, pstmt, rs);
         }
     }
 
-    public void delete(String memberId) throws SQLException {
+    public void delete(String memberId) {
         String sql = "delete from member where member_id = ?";
 
         Connection con = null;
@@ -113,8 +113,7 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             int count = pstmt.executeUpdate();
             log.info("delete count = {}", count);
         } catch (SQLException e) {
-            log.info("db error", e);
-            throw e;
+            throw exTranslator.translate("delete", sql, e);
         } finally {
             close(con, pstmt, rs);
         }
